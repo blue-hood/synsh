@@ -1,0 +1,2 @@
+# synsh
+synth シェル
