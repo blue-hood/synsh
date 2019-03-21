@@ -4,7 +4,7 @@
   "description": "synth shell. ",
   "main": "index.js",
   "scripts": {
-    "build": "cd synth && make"
+    "build": "git clone --recursive https://github.com/blue-hood/synth; cd synth && make"
   },
   "bin": {
     "synsh": "index.js"
@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/blue-hood/synsh/issues"
   },
-  "homepage": "https://github.com/blue-hood/synsh#readme"
+  "homepage": "https://github.com/blue-hood/synsh#readme",
+  "dependencies": {
+    "audio-play": "^2.2.1"
+  }
 }
