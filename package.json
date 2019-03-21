@@ -1,0 +1,22 @@
+{
+  "name": "synsh",
+  "version": "1.0.0",
+  "description": "synth shell. ",
+  "main": "index.js",
+  "scripts": {
+    "build": "cd synth && make"
+  },
+  "bin": {
+    "synsh": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/blue-hood/synsh.git"
+  },
+  "author": "BlueHood",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/blue-hood/synsh/issues"
+  },
+  "homepage": "https://github.com/blue-hood/synsh#readme"
+}
