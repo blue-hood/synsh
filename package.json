@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/blue-hood/synsh#readme",
   "dependencies": {
-    "audio-play": "^2.2.1"
+    "speaker": "^0.4.1"
   }
 }
