@@ -4,7 +4,7 @@
   "description": "synth shell. ",
   "main": "index.js",
   "scripts": {
-    "build": "git clone --recursive https://github.com/blue-hood/synth; cd synth && make"
+    "start": "node index.js"
   },
   "bin": {
     "synsh": "index.js"
