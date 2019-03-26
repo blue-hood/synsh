@@ -3,6 +3,7 @@
 
 const sampleRate = 44100;
 
+const fs = require('fs');
 const Speaker = require('speaker');
 const readline = require('readline');
 const synth = require('./synth');
@@ -12,16 +13,16 @@ let isCompleted = true;
 let isEof = false;
 const commandBuffer = [];
 
-const speaker = new Speaker({
-    channels: 1,
-    bitDepth: 16,
-    sampleRate: sampleRate,
-});
-
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: '> ',
+});
+
+const speaker = new Speaker({
+    channels: 1,
+    bitDepth: 16,
+    sampleRate: sampleRate,
 });
 
 synth.setOnCompleteHandler(() => {
@@ -33,8 +34,34 @@ synth.setOnCompleteHandler(() => {
     }
 });
 
+rl.prompt();
+
+rl.on('line', (line) => {
+    let args = line.replace(/#.*/, '').trim().split(/\s+/);
+    if (args[0] === '') args = [];
+    commandBuffer.push(args);
+
+    execute();
+});
+
+rl.on('close', () => {
+    isEof = true;
+
+    if (!execute() && isEof) {
+        process.exit(0);
+    }
+});
+
+
+
+
 const send = (args, onSuccess) => {
     synth.pushOnSuccessHandler(onSuccess);
+
+    for (let index in args) {
+        args[index] = args[index].toString();
+    }
+
     synth.write(args);
     isCompleted = false;
 }
@@ -110,12 +137,29 @@ const execute = () => {
             printResponse(response, 0);
         }
 
-        // addcom (component type) as (name)
-        if (args.length == 4 && args[0] == 'addcom' && args[2] == 'as' && isName(args[3])) {
+        commands.forEach((command) => {
+            if (command.trigger(args)) {
+                [args, onSuccess] = command.handler(args, onSuccess);
+            }
+        });
+
+        send(args, onSuccess);
+    }
+
+    return isExecuted;
+}
+
+const commands = [
+    {   // addcom (component type) as (name)
+        trigger: (args) => {
+            return args.length == 4 && args[0] == 'addcom' && args[2] == 'as' && isName(args[3]);
+        },
+        handler: (args, onSuccess) => {
             const name = args[3];
             if (name in comNameTable) {
                 console.log("定義済みの名前です。");
                 args = [];
+                return [args, onSuccess];
             }
 
             args.splice(2, 2);
@@ -142,22 +186,39 @@ const execute = () => {
                 });
 
             };
-        }
-        // connect (出力ポート名) (入力ポート名) ...
-        else if (args.length >= 3 && args[0] == 'connect') {
+
+            return [args, onSuccess];
+        },
+    },
+
+    {   // connect (出力ポート名) (入力ポート名) ...
+        trigger: (args) => {
+            return args.length >= 3 && args[0] == 'connect';
+        },
+        handler: (args, onSuccess) => {
             args[1] = outPortUuid(args[1]);
             args[2] = inPortUuid(args[2]);
-        }
-        // call (コンポーネント名) ...
-        else if (args.length >= 2 && args[0] == 'call') {
+            return [args, onSuccess];
+        },
+    },
+
+    {   // call (コンポーネント名) ...
+        trigger: (args) => {
+            return args.length >= 2 && args[0] == 'call';
+        },
+        handler: (args, onSuccess) => {
             args[1] = comUuid(args[1]);
-        }
-        // play (サンプリングレート) ...
-        else if (args.length >= 2 && args[0] == 'play') {
-            if (Number(args[1]) !== sampleRate) {
-                console.log(`サンプリングレートは ${sampleRate} のみ対応しています。`);
-                args = [];
-            }
+            return [args, onSuccess];
+        },
+    },
+
+    {   // play speaker (再生時間 [s]) ...
+        trigger: (args) => {
+            return args.length >= 3 && args[0] == 'play' && args[1] == 'speaker';
+        },
+        handler: (args, onSuccess) => {
+            args[1] = sampleRate;
+            args[2] = Math.round(sampleRate * Number(args[2]));
 
             onSuccess = (response) => {
                 const bufferSize = response.samples.length;
@@ -167,29 +228,23 @@ const execute = () => {
                 }
                 speaker.write(buffer);
             };
-        }
 
-        send(args, onSuccess);
-    }
+            return [args, onSuccess];
+        },
+    },
+    /*
+    {
+        trigger: (args) => {
+            return;
+        },
+        handler: (args, onSuccess) => {
+            return [args, onSuccess];
+        },
+    },
+    */
+];
 
-    return isExecuted;
+if (process.argv.length >= 3) {
+    rl.write(fs.readFileSync(process.argv[2]));
 }
 
-
-rl.prompt();
-
-rl.on('line', (line) => {
-    let args = line.replace(/#.*/, '').trim().split(/\s+/);
-    if (args[0] === '') args = [];
-    commandBuffer.push(args);
-
-    execute();
-});
-
-rl.on('close', () => {
-    isEof = true;
-
-    if (!execute() && isEof) {
-        process.exit(0);
-    }
-});

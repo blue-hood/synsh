@@ -10,4 +10,6 @@ connect input1.value sine1.freq
 connect sine1.sine speaker1.sound
 
 call input1 setvalue 440.0
-play 44100 44100
+play 44100 16
+play speaker 0.1
+
