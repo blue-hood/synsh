@@ -25,14 +25,15 @@ const speaker = new Speaker({
     sampleRate: sampleRate,
 });
 
-synth.setOnCompleteHandler(() => {
+const idle = () => {
     isCompleted = true;
     rl.prompt();
 
     if (!execute() && isEof) {
         process.exit(0);
     }
-});
+};
+synth.setOnCompleteHandler(idle);
 
 rl.prompt();
 
@@ -250,23 +251,64 @@ const commands = [
         },
     },
 
-    {   // play speaker (再生時間 [s]) ...
+    {   // play speaker ...
         trigger: (args) => {
-            return args.length >= 3 && args[0] == 'play' && args[1] == 'speaker';
+            return args.length >= 2 && args[0] == 'play' && args[1] == 'speaker';
         },
         handler: (args, onSuccess) => {
             args[1] = sampleRate;
-            args[2] = Math.round(sampleRate * Number(args[2]));
 
-            onSuccess = (response) => {
-                const bufferSize = response.samples.length;
-                const buffer = new Buffer(bufferSize * 2);
-                for (let i = 0; i < bufferSize; i++) {
-                    buffer.writeInt16LE(Math.round(response.samples[i] * 32767), i * 2);
-                }
-                speaker.write(buffer);
-            };
+            if (args.length >= 3) {
+                args[2] = Math.round(sampleRate * Number(args[2]));
 
+                onSuccess = (response) => {
+                    const bufferSize = response.samples.length;
+                    const buffer = new Buffer(bufferSize * 2);
+                    for (let i = 0; i < bufferSize; i++) {
+                        buffer.writeInt16LE(Math.round(response.samples[i] * 32767), i * 2);
+                    }
+                    speaker.write(buffer);
+                };
+            } else {
+                const fps = 30;
+                args[2] = Math.round(sampleRate / fps);
+
+                onSuccess = (response) => {
+                    const bufferSize = response.samples.length;
+                    const buffer = new Buffer(bufferSize * 2);
+                    for (let i = 0; i < bufferSize; i++) {
+                        buffer.writeInt16LE(Math.round(response.samples[i] * 32767), i * 2);
+                    }
+                    speaker.write(buffer)
+                };
+
+                const send_play = setInterval(() => {
+                    if (speaker._writableState.bufferedRequestCount < 1) {
+                        send(args, onSuccess);
+                    }
+                }, 500 / fps);
+
+                const watchStdin = (data) => {
+                    if (data == 'q') {
+                        clearInterval(send_play);
+                        process.stdin.removeListener('data', watchStdin);
+                        synth.setOnCompleteHandler(idle);
+                        idle();
+                    }
+                };
+                process.stdin.on('data', watchStdin);
+                synth.setOnCompleteHandler(() => { });
+            }
+            return [args, onSuccess];
+        },
+    },
+
+    {   // lsport (コンポーネント名) ...
+        trigger: (args) => {
+            return args.length >= 2 && args[0] == 'lsport';
+        },
+        handler: (args, onSuccess) => {
+            args[1] = comUuid(args[1]);
             return [args, onSuccess];
         },
     },
