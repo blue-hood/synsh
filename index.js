@@ -93,7 +93,7 @@ const inPortUuid = (arg) => {
     }
 
     return comNameTable[comName].inputs[inName];
-}
+};
 
 const outPortUuid = (arg) => {
     if (arg.match(/^[a-z_][0-9a-z_]*\..*$/) === null) {
@@ -106,7 +106,45 @@ const outPortUuid = (arg) => {
     }
 
     return comNameTable[comName].outputs[outName];
-}
+};
+
+const replaceUuid = (string) => {
+    const search = (uuid) => {
+        for (const name in comNameTable) {
+            const com = comNameTable[name];
+
+            if (com.uuid == uuid) {
+                return name;
+            }
+
+            for (const name in com.inputs) {
+                if (com.inputs[name] == uuid) {
+                    return name;
+                }
+            }
+
+            for (const name in com.outputs) {
+                if (com.outputs[name] == uuid) {
+                    return name;
+                }
+            }
+        }
+
+        return null;
+    };
+
+    let pattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+    let found;
+
+    while ((found = pattern.exec(string)) != null) {
+        const name = search(found);
+        if (name !== null) {
+            string = string.substring(0, pattern.lastIndex) + ` (${name}) ` + string.substring(pattern.lastIndex);
+        }
+    }
+
+    return string;
+};
 
 const execute = () => {
     let args;
@@ -121,13 +159,13 @@ const execute = () => {
                     let line = '';
 
                     for (let i = 0; i < level; i++) line += ' ';
-                    line += `${key}: `;
+                    line += replaceUuid(key.toString()) + ': ';
 
                     if (value instanceof Object) {
                         console.log(line);
                         printResponse(value, level + 2);
                     } else {
-                        line += value;
+                        line += replaceUuid(value.toString());
                         console.log(line);
                     }
 
