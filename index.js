@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict'
 
+const fps = 30;
 const sampleRate = 44100;
 
 const fs = require('fs');
@@ -270,7 +271,6 @@ const commands = [
                     speaker.write(buffer);
                 };
             } else {
-                const fps = 30;
                 args[2] = Math.round(sampleRate / fps);
 
                 onSuccess = (response) => {
