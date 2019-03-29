@@ -27,7 +27,7 @@ synth.stdout.on('data', (data) => {
 });
 
 synth.stderr.on('data', (data) => {
-    console.log(data);
+    console.log(data.toString());
 });
 
 const write = (args) => {
